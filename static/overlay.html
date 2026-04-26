@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <style>
-  /* ── Reset ── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -14,7 +13,6 @@
     font-family: "Segoe UI", "Arial Rounded MT Bold", Arial, sans-serif;
   }
 
-  /* ── Speech bubble ── */
   #bubble {
     position: absolute;
     background: #ffffff;
@@ -27,19 +25,13 @@
     pointer-events: none;
     box-shadow: 0 6px 24px rgba(0,0,0,0.25);
     border: 3px solid #e8e8e8;
-
-    /* Anchor: horizontal center, bottom of bubble above the object */
     transform: translate(-50%, -115%);
-
-    /* Smooth position tracking */
-    transition: left 0.08s linear, top 0.08s linear;
-
-    /* Show/hide */
+    /* font-size and padding set dynamically by JS from alert payload */
     opacity: 0;
     scale: 0.7;
     transition:
-      left   0.08s linear,
-      top    0.08s linear,
+      left    0.1s linear,
+      top     0.1s linear,
       opacity 0.25s ease,
       scale   0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -49,12 +41,10 @@
     scale: 1;
   }
 
-  /* Tail pointing downward */
   #bubble::after {
     content: '';
     position: absolute;
-    bottom: -18px;
-    left: 50%;
+    bottom: -18px; left: 50%;
     transform: translateX(-50%);
     border: 14px solid transparent;
     border-top-color: #e8e8e8;
@@ -63,8 +53,7 @@
   #bubble::before {
     content: '';
     position: absolute;
-    bottom: -14px;
-    left: 50%;
+    bottom: -14px; left: 50%;
     transform: translateX(-50%);
     border: 13px solid transparent;
     border-top-color: #ffffff;
@@ -72,11 +61,9 @@
     z-index: 1;
   }
 
-  /* ── Frog indicator dot (shows when frog is detected but no alert) ── */
   #dot {
     position: absolute;
-    width: 14px;
-    height: 14px;
+    width: 14px; height: 14px;
     background: #22c55e;
     border-radius: 50%;
     border: 2px solid white;
@@ -84,33 +71,58 @@
     pointer-events: none;
     opacity: 0;
     transition: left 0.08s linear, top 0.08s linear, opacity 0.3s ease;
-    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    box-shadow: 0 0 8px rgba(34,197,94,0.6);
   }
   #dot.visible { opacity: 1; }
 </style>
 </head>
 <body>
 
-<div id="bubble">🎉 Welcome!</div>
+<div id="bubble"></div>
 <div id="dot"></div>
 
 <script>
   const CANVAS_W = 1920;
   const CANVAS_H = 1080;
-  const WS_URL   = "ws://localhost:8765/ws";
+  const WS_URL   = `ws://${location.hostname || 'localhost'}:8765/ws`;
 
-  const bubble  = document.getElementById("bubble");
-  const dot     = document.getElementById("dot");
+  const bubble = document.getElementById("bubble");
+  const dot    = document.getElementById("dot");
 
   let hideTimer  = null;
-  let liveCX     = 0.5;   // live tracking position (for dot indicator)
-  let liveCY     = 0.3;
+  let isVisible  = false;
+  let followMode = false;
+  let lastCX     = 0.5;
+  let lastCY     = 0.3;
 
-  // ── WebSocket connection with auto-reconnect ──────────────────────────────
+  function moveBubbleTo(cx, cy) {
+    lastCX = cx;
+    lastCY = cy;
+    bubble.style.left = (cx * CANVAS_W) + "px";
+    bubble.style.top  = (cy * CANVAS_H) + "px";
+  }
+
+  function showBubble(message, durationMs, cx, cy, follow, fontSize, padding) {
+    bubble.textContent = message;
+    bubble.style.fontSize = fontSize + "px";
+    bubble.style.padding  = padding + "px " + (padding * 1.67 | 0) + "px";
+    followMode = follow;
+    moveBubbleTo(cx, cy);
+    bubble.classList.add("visible");
+    isVisible = true;
+
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      bubble.classList.remove("visible");
+      isVisible  = false;
+      followMode = false;
+    }, durationMs);
+  }
+
   function connect() {
     const ws = new WebSocket(WS_URL);
 
-    ws.onopen = () => console.log("[overlay] Connected to server");
+    ws.onopen = () => console.log("[overlay] Connected to", WS_URL);
 
     ws.onmessage = (e) => {
       let data;
@@ -118,63 +130,55 @@
 
       const { bbox, alerts } = data;
 
-      // Update live dot position (tracker indicator only, bubble doesn't follow)
+      // Always update dot + track last known bbox position
       if (bbox && bbox.visible) {
-        liveCX = bbox.cx;
-        liveCY = bbox.cy;
-        moveDot(liveCX, liveCY);
+        dot.style.left = (bbox.cx * CANVAS_W) + "px";
+        dot.style.top  = (bbox.cy * CANVAS_H) + "px";
         dot.classList.add("visible");
+
+        // If bubble is visible and follow mode is on, move it with the frog
+        if (isVisible && followMode) {
+          moveBubbleTo(bbox.cx, bbox.cy);
+        }
       } else {
         dot.classList.remove("visible");
       }
 
-      // Show alert — bubble snaps to position captured at sub time
+      // Handle incoming alert
       if (alerts && alerts.length > 0) {
         const alert = alerts[0];
-        // Use snapped_bbox if available, else fall back to current live position
-        const bx = alert.snapped_bbox || (bbox && bbox.visible ? bbox : null);
-        const cx = bx ? bx.cx : liveCX;
-        const cy = bx ? bx.cy : liveCY;
-        showBubble(alert.message, alert.duration, cx, cy);
+        const follow = alert.follow === true;
+
+        // Use snapped position from server as starting point
+        let cx = lastCX;
+        let cy = lastCY;
+        if (alert.snapped_bbox && typeof alert.snapped_bbox.cx === "number") {
+          cx = alert.snapped_bbox.cx;
+          cy = alert.snapped_bbox.cy;
+        } else if (bbox && bbox.visible) {
+          cx = bbox.cx;
+          cy = bbox.cy;
+        }
+
+        showBubble(
+          alert.message,
+          alert.duration,
+          cx, cy,
+          follow,
+          alert.font_size  || 28,
+          alert.padding    || 12
+        );
       }
     };
 
     ws.onclose = () => {
-      console.log("[overlay] Disconnected — retrying in 2s...");
+      console.log("[overlay] Disconnected — retrying in 2s");
       setTimeout(connect, 2000);
     };
-
-    ws.onerror = (err) => {
-      console.warn("[overlay] WebSocket error", err);
-      ws.close();
-    };
+    ws.onerror = () => ws.close();
   }
 
-  // ── Position helpers ──────────────────────────────────────────────────────
-  function moveDot(cx, cy) {
-    // Only the dot tracks live — bubble is static per alert
-    dot.style.left = (cx * CANVAS_W) + "px";
-    dot.style.top  = (cy * CANVAS_H) + "px";
-  }
-
-  // ── Alert display — bubble is locked to snapped position ──────────────────
-  function showBubble(message, durationMs = 6000, cx = 0.5, cy = 0.3) {
-    bubble.textContent = message;
-
-    // Lock bubble to the frog's position at the moment of the sub event
-    bubble.style.left = (cx * CANVAS_W) + "px";
-    bubble.style.top  = (cy * CANVAS_H) + "px";
-
-    bubble.classList.add("visible");
-
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      bubble.classList.remove("visible");
-    }, durationMs);
-  }
-
-  // ── Start ─────────────────────────────────────────────────────────────────
-  moveDot(liveCX, liveCY);
+  moveBubbleTo(lastCX, lastCY);
   connect();
 </script>
 
