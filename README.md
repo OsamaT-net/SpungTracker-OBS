@@ -39,7 +39,7 @@ Start services inside the app in this order:
 
 ---
 
-## 4. NVIDIA CUDA (NVIDIA GPUs only) RECCOMENDED
+## 3. NVIDIA CUDA (VIDIA GPUs only) RECCOMENDED
 
 YOLO is extremely CPU intensive, this offloads the load to the gpu and runs it efficiently
 
@@ -85,4 +85,4 @@ Open the app → go to the **Twitch** tab → paste all three values → click *
    - Uncheck ☐ **"Shutdown source when not visible"**
 3. Place the Browser Source **above** your camera/game layers so the bubble renders on top
 4. Make sure the Hub server is running before OBS loads the source
-5. (Optional) For audio, right click the OBS browser source -> Properties -> check Control audio via OBS
+5. (Optional) For audio, right click the OBS browser source → Properties → check Control audio via OBS
