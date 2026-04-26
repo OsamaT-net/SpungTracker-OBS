@@ -68,10 +68,9 @@ Open the app → go to the **Twitch** tab → paste all three values → click *
 ## 5. OBS Browser Source
 
 1. In OBS, add a new **Browser Source** to your scene
+2. Set the Width and Height to the same values as camera. 
 2. Set:
    - **URL**: `http://localhost:8765/`
-   - **Width**: `1920`
-   - **Height**: `1080`
    - **Custom CSS**: `body { background: transparent !important; }`
    - Uncheck ☐ **"Shutdown source when not visible"**
 3. Place the Browser Source **above** your camera/game layers so the bubble renders on top
