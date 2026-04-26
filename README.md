@@ -1,8 +1,20 @@
 # SPUNG Tracker — Setup Guide
 
 ---
+## 1. Installation
 
-## 1. Dependencies
+Using git:
+```powershell
+git clone https://github.com/OsamaT-net/SpungTracker-Twitch.git
+```
+Direct Download:
+1. Click <>Code
+2. Download ZIP
+3. Extract
+
+---
+
+## 2. Dependencies
 
 Requires **Python 3.10 or newer**. (Python 3.14 Reccomended)
 
@@ -13,7 +25,7 @@ pip install PyQt6
 
 ---
 
-## 2. Usage
+## 3. Usage
 
 ```powershell
 python app.py
@@ -27,19 +39,17 @@ Start services inside the app in this order:
 
 ---
 
-## 3. NVIDIA CUDA (VIDIA GPUs only) RECCOMENDED
+## 4. NVIDIA CUDA (NVIDIA GPUs only) RECCOMENDED
 
 YOLO is extremely CPU intensive, this offloads the load to the gpu and runs it efficiently
 
-If it prints `False`, reinstall PyTorch with CUDA support:
 ```powershell
-pip uninstall torch torchvision -y
 pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu130
 ```
 
 ---
 
-## 4. Twitch Credentials
+## 5. Twitch Credentials
 
 You need three values: **Client ID**, **Client Secret**, and **Broadcaster ID**.
 
@@ -65,7 +75,7 @@ Open the app → go to the **Twitch** tab → paste all three values → click *
 
 ---
 
-## 5. OBS Browser Source
+## 6. OBS Browser Source
 
 1. In OBS, add a new **Browser Source** to your scene
 2. Set the Width and Height to the same values as camera. 
