@@ -1,4 +1,4 @@
-# 🐸 Frog Tracker — Setup Guide
+# Spung — Setup Guide
 
 ---
 
@@ -58,7 +58,7 @@ You need three values: **Client ID**, **Client Secret**, and **Broadcaster ID**.
 1. Go to **https://dev.twitch.tv/console** and sign in
 2. Click **Register Your Application**
 3. Fill in:
-   - **Name**: anything (e.g. `FrogTrackerBot`)
+   - **Name**: anything (e.g. `SpungTrackerBot`)
    - **OAuth Redirect URLs**: `http://localhost:17563`
    - **Category**: Broadcaster Suite
 4. Click **Create**, then **Manage** on your new app
