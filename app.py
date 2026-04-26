@@ -409,12 +409,12 @@ class MainWindow(QMainWindow):
         tl.addRow("Confidence", self.conf_spin)
 
         self.fps_spin = QSpinBox()
-        self.fps_spin.setRange(1, 30)
+        self.fps_spin.setRange(1, 60)
         self.fps_spin.setValue(self.cfg["infer_fps"])
         tl.addRow("Inference FPS", self.fps_spin)
 
         self.size_combo = QComboBox()
-        for s in ["256", "320", "416", "640"]:
+        for s in ["256", "320", "416", "640", "1280"]:
             self.size_combo.addItem(s)
         self.size_combo.setCurrentText(str(self.cfg["infer_size"]))
         tl.addRow("Inference size", self.size_combo)

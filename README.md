@@ -1,21 +1,19 @@
-# Spung — Setup Guide
+# SPUNG Tracker — Setup Guide
 
 ---
 
 ## 1. Dependencies
 
-Requires **Python 3.10 or newer**.
+Requires **Python 3.10 or newer**. (Python 3.14 Reccomended)
 
 ```powershell
 pip install -r requirements.txt
 pip install PyQt6
 ```
 
-The YOLO model (`yolov8s-world.pt`, ~87 MB) downloads automatically the first time you start the tracker.
-
 ---
 
-## 2. Installation
+## 2. Usage
 
 ```powershell
 python app.py
@@ -29,24 +27,15 @@ Start services inside the app in this order:
 
 ---
 
-## 3. NVIDIA CUDA (optional — NVIDIA GPUs only)
+## 3. NVIDIA CUDA (VIDIA GPUs only) RECCOMENDED
 
-Moves YOLO inference off the CPU onto the GPU, dropping CPU usage to near 0%.
-
-First verify your GPU is detected:
-```powershell
-python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
-```
+YOLO is extremely CPU intensive, this offloads the load to the gpu and runs it efficiently
 
 If it prints `False`, reinstall PyTorch with CUDA support:
 ```powershell
 pip uninstall torch torchvision -y
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu130
 ```
-
-Then verify again — it should now print `True` and your GPU name. Enable **"Use NVIDIA CUDA GPU"** in the app's 🎯 Tracker tab.
-
-> **AMD GPU:** CUDA is NVIDIA-only. Leave CUDA unchecked and set Inference FPS to 3–5 to reduce CPU load.
 
 ---
 
@@ -67,12 +56,12 @@ You need three values: **Client ID**, **Client Secret**, and **Broadcaster ID**.
 
 ### Broadcaster ID
 Your numeric Twitch user ID (not your username). Find it at:
-**https://www.streamweasels.com/tools/convert-twitch-username-to-user-id/**
+**https://streamscharts.com/tools/convert-username**
 
 ### Enter credentials in the app
-Open the app → go to the **📡 Twitch** tab → paste all three values → click **Save Twitch credentials**.
+Open the app → go to the **Twitch** tab → paste all three values → click **Save Twitch credentials**.
 
-> **Note:** The Twitch listener requires your channel to be a Twitch Affiliate or Partner to receive real subscriber events. You can test the full bubble pipeline without it using the **🧪 Test** tab in the app.
+> **Note:** The Twitch listener requires your channel to be a Twitch Affiliate or Partner to receive real subscriber events. You can test the full bubble pipeline without it using the **Test** tab in the app.
 
 ---
 
