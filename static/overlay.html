@@ -80,6 +80,7 @@
 
 <div id="bubble"></div>
 <div id="dot"></div>
+<audio id="sub-sound" preload="auto"></audio>
 
 <script>
   const CANVAS_W = 1920;
@@ -100,6 +101,14 @@
     lastCY = cy;
     bubble.style.left = (cx * CANVAS_W) + "px";
     bubble.style.top  = (cy * CANVAS_H) + "px";
+  }
+
+  function playSound() {
+    const audio = document.getElementById("sub-sound");
+    if (audio.src && audio.src !== window.location.href) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
   }
 
   function showBubble(message, durationMs, cx, cy, follow, fontSize, padding) {
@@ -160,6 +169,7 @@
           cy = bbox.cy;
         }
 
+        if (alert.play_sound) playSound();
         showBubble(
           alert.message,
           alert.duration,
@@ -177,6 +187,10 @@
     };
     ws.onerror = () => ws.close();
   }
+
+  // Pre-load sound from server
+  const audio = document.getElementById("sub-sound");
+  audio.src = `http://${location.hostname || 'localhost'}:8765/sound`;
 
   moveBubbleTo(lastCX, lastCY);
   connect();

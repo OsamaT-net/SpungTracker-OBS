@@ -1,5 +1,5 @@
 """
-app.py — Spung Tracker Desktop Control Panel
+app.py — Frog Tracker Desktop Control Panel
 Run with: python app.py
 """
 
@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QSpinBox, QDoubleSpinBox,
     QGroupBox, QComboBox, QTextEdit, QTabWidget, QFormLayout, QCheckBox,
+    QFileDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QImage, QPixmap, QFont
@@ -47,6 +48,7 @@ def load_config():
         "tracking_follows": False,
         "font_size":        28,
         "bubble_padding":   12,
+        "sound_file":       "",
     }
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, encoding="utf-8") as f:
@@ -72,12 +74,12 @@ class StatusDot(QLabel):
 
 # ── On-demand tracker worker ──────────────────────────────────────────────────
 # Loads YOLO once, then sleeps. When trigger() is called it scans frames
-# until Spung is found (or timeout), pushes the bbox, then sleeps again.
+# until the frog is found (or timeout), pushes the bbox, then sleeps again.
 # This eliminates the 15-second model load delay on every sub event.
 class OnDemandTrackerWorker(QObject):
     log     = pyqtSignal(str)
     stopped = pyqtSignal()
-    found   = pyqtSignal()   # emitted when Spung position is confirmed
+    found   = pyqtSignal()   # emitted when frog position is confirmed
 
     def __init__(self, cfg):
         super().__init__()
@@ -87,7 +89,7 @@ class OnDemandTrackerWorker(QObject):
         self._stop_evt = threading.Event()
 
     def trigger(self):
-        """Called when a sub fires — wakes the tracker to find Spung."""
+        """Called when a sub fires — wakes the tracker to find the frog."""
         self._trigger.set()
 
     def run(self):
@@ -114,7 +116,7 @@ class OnDemandTrackerWorker(QObject):
                 if self._stop_evt.is_set():
                     break
                 self._trigger.clear()
-                self.log.emit("[tracker] Sub fired — scanning for Spung...")
+                self.log.emit("[tracker] Sub fired — scanning for frog...")
 
                 # Reset server bbox so polling doesn't match stale state
                 try:
@@ -126,13 +128,13 @@ class OnDemandTrackerWorker(QObject):
                 # Re-read tracking_follows each time so live changes take effect
                 follow_mode   = self.cfg.get("tracking_follows", False)
                 duration_s    = self.cfg.get("duration_ms", 6000) / 1000
-                # Phase 1: find the Spung (up to timeout_s seconds)
+                # Phase 1: find the frog (up to timeout_s seconds)
                 # Phase 2: if follow mode, keep tracking for the bubble duration
                 find_deadline = time.time() + timeout_s
                 found_pos     = False
                 last_infer    = 0
                 alert_sent    = False
-                follow_until  = None   # set once Spung is found in follow mode
+                follow_until  = None   # set once frog is found in follow mode
 
                 while not self._stop_evt.is_set():
                     now = time.time()
@@ -143,7 +145,7 @@ class OnDemandTrackerWorker(QObject):
                     if alert_sent and follow_mode and now > follow_until:
                         break  # follow duration expired
                     if not alert_sent and now > find_deadline:
-                        break  # gave up finding Spung
+                        break  # gave up finding frog
 
                     ret, frame = cap.read()
                     if not ret:
@@ -181,14 +183,14 @@ class OnDemandTrackerWorker(QObject):
                             pass
 
                         if not alert_sent:
-                            self.log.emit(f"[tracker] Spung found at ({cx:.2f}, {cy:.2f})"
+                            self.log.emit(f"[tracker] Frog found at ({cx:.2f}, {cy:.2f})"
                                           + (" — following" if follow_mode else ""))
                             self.found.emit()
                             alert_sent   = True
                             found_pos    = True
                             follow_until = time.time() + duration_s
                     else:
-                        # Spung not visible this frame — mark invisible but keep scanning in follow mode
+                        # Frog not visible this frame — mark invisible but keep scanning in follow mode
                         try:
                             requests.post(f"{SERVER_URL}/bbox",
                                 json={"cx": 0.5, "cy": 0.3, "visible": False}, timeout=0.1)
@@ -196,7 +198,7 @@ class OnDemandTrackerWorker(QObject):
                             pass
 
                 if not found_pos:
-                    self.log.emit("[tracker] Spung not found — using last known position")
+                    self.log.emit("[tracker] Frog not found — using last known position")
                     self.found.emit()  # still fire so the alert goes through
 
             cap.release()
@@ -353,7 +355,7 @@ class SubprocessWorker(QObject):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Spung Tracker Control Panel")
+        self.setWindowTitle("🐸 Frog Tracker Control Panel")
         self.setMinimumSize(1100, 750)
 
         self.cfg = load_config()
@@ -409,7 +411,7 @@ class MainWindow(QMainWindow):
         tl.addRow("Confidence", self.conf_spin)
 
         self.fps_spin = QSpinBox()
-        self.fps_spin.setRange(1, 60)
+        self.fps_spin.setRange(1, 30)
         self.fps_spin.setValue(self.cfg["infer_fps"])
         tl.addRow("Inference FPS", self.fps_spin)
 
@@ -430,11 +432,11 @@ class MainWindow(QMainWindow):
             0 if self.cfg.get("tracker_mode", "oneshot") == "oneshot" else 1)
         tl.addRow("Tracker mode", self.mode_combo)
 
-        save_btn = QPushButton("Save settings")
+        save_btn = QPushButton("💾 Save settings")
         save_btn.clicked.connect(self._save_settings)
         tl.addRow("", save_btn)
 
-        tabs.addTab(tracker_tab, "Tracker")
+        tabs.addTab(tracker_tab, "🎯 Tracker")
 
         # ── Tab 2: Twitch ──
         twitch_tab = QWidget()
@@ -461,11 +463,11 @@ class MainWindow(QMainWindow):
         id_link.setOpenExternalLinks(True)
         tw.addRow("", id_link)
 
-        save_twitch_btn = QPushButton("Save Twitch credentials")
+        save_twitch_btn = QPushButton("💾 Save Twitch credentials")
         save_twitch_btn.clicked.connect(self._save_settings)
         tw.addRow("", save_twitch_btn)
 
-        tabs.addTab(twitch_tab, "Twitch")
+        tabs.addTab(twitch_tab, "📡 Twitch")
 
         # ── Tab 3: Message ──
         msg_tab = QWidget()
@@ -513,16 +515,30 @@ class MainWindow(QMainWindow):
         self.bubble_padding_spin.setValue(self.cfg.get("bubble_padding", 12))
         ml.addRow("Bubble padding", self.bubble_padding_spin)
 
-        self.tracking_follows_check = QCheckBox("Bubble follows Spung while it's visible")
+        self.tracking_follows_check = QCheckBox("Bubble follows frog while it's visible")
         self.tracking_follows_check.setChecked(self.cfg.get("tracking_follows", False))
         self.tracking_follows_check.stateChanged.connect(self._save_and_push_message_config)
-        ml.addRow("Follow Spung", self.tracking_follows_check)
+        ml.addRow("Follow frog", self.tracking_follows_check)
 
-        save_msg_btn = QPushButton("Save & apply message settings")
+        # Sound file picker
+        sound_row = QHBoxLayout()
+        self.sound_path_edit = QLineEdit(self.cfg.get("sound_file", ""))
+        self.sound_path_edit.setPlaceholderText("No sound file selected")
+        self.sound_path_edit.setReadOnly(True)
+        sound_browse_btn = QPushButton("Browse...")
+        sound_browse_btn.clicked.connect(self._browse_sound_file)
+        sound_clear_btn = QPushButton("Clear")
+        sound_clear_btn.clicked.connect(self._clear_sound_file)
+        sound_row.addWidget(self.sound_path_edit)
+        sound_row.addWidget(sound_browse_btn)
+        sound_row.addWidget(sound_clear_btn)
+        ml.addRow("Sound file", sound_row)
+
+        save_msg_btn = QPushButton("💾 Save & apply message settings")
         save_msg_btn.clicked.connect(self._save_and_push_message_config)
         ml.addRow("", save_msg_btn)
 
-        tabs.addTab(msg_tab, "Message")
+        tabs.addTab(msg_tab, "💬 Message")
 
         # ── Tab 4: Test ──
         test_tab = QWidget()
@@ -533,13 +549,13 @@ class MainWindow(QMainWindow):
         tel.addWidget(QLabel("Subscriber name:"))
         self.test_name = QLineEdit("TestViewer")
         tel.addWidget(self.test_name)
-        fire_btn = QPushButton("Fire test alert")
+        fire_btn = QPushButton("🎉 Fire test alert")
         fire_btn.setStyleSheet("font-size: 14px; padding: 10px; background: #1d4ed8;")
         fire_btn.clicked.connect(self._fire_test_alert)
         tel.addWidget(fire_btn)
         tel.addStretch()
 
-        tabs.addTab(test_tab, "Test")
+        tabs.addTab(test_tab, "🧪 Test")
 
         root.addWidget(tabs)
 
@@ -647,6 +663,7 @@ class MainWindow(QMainWindow):
             "tracking_follows": self.tracking_follows_check.isChecked(),
             "font_size":        self.font_size_spin.value(),
             "bubble_padding":   self.bubble_padding_spin.value(),
+            "sound_file":       self.sound_path_edit.text().strip(),
         })
         save_config(self.cfg)
         self._log("[app] Settings saved")
@@ -743,10 +760,10 @@ class MainWindow(QMainWindow):
         if detection:
             x1, y1, x2, y2 = [int(v) for v in detection[2]]
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 220, 80), 2)
-            cv2.putText(frame, "Spung", (x1, y1 - 8),
+            cv2.putText(frame, "frog", (x1, y1 - 8),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 220, 80), 2)
         else:
-            cv2.putText(frame, "No Spung detected", (20, 40),
+            cv2.putText(frame, "No frog detected", (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 60, 200), 2)
         rgb  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         h, w = rgb.shape[:2]
@@ -800,6 +817,7 @@ class MainWindow(QMainWindow):
                 "tracking_follows": self.cfg.get("tracking_follows", False),
                 "font_size":        self.cfg.get("font_size", 28),
                 "bubble_padding":   self.cfg.get("bubble_padding", 12),
+                "sound_file":       self.cfg.get("sound_file", ""),
             }, timeout=2)
             if r.status_code == 200:
                 self._log("[msg] Message config applied")
@@ -807,6 +825,20 @@ class MainWindow(QMainWindow):
                 self._log(f"[msg] Server returned {r.status_code} — is the server running?")
         except Exception as e:
             self._log(f"[msg] Could not reach server — start Hub server first! ({e})")
+
+    # ── Sound file picker ────────────────────────────────────────────────────
+    def _browse_sound_file(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select sound file", "",
+            "Audio files (*.mp3 *.wav *.ogg *.flac);;All files (*)"
+        )
+        if path:
+            self.sound_path_edit.setText(path)
+            self._save_and_push_message_config()
+
+    def _clear_sound_file(self):
+        self.sound_path_edit.setText("")
+        self._save_and_push_message_config()
 
     # ── Test / sub alert ──────────────────────────────────────────────────────
     def _send_subscribe_post(self, name):
@@ -828,7 +860,7 @@ class MainWindow(QMainWindow):
         if mode == "oneshot" and self._tracker_active and \
                 isinstance(self._tracker_worker, OnDemandTrackerWorker):
             # Trigger the always-loaded model to scan, then fire the alert once found
-            self._log("[tracker] Waking tracker to locate Spung...")
+            self._log("[tracker] Waking tracker to locate frog...")
 
             def wait_for_found():
                 # Connect found signal once

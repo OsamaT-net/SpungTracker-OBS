@@ -21,7 +21,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -44,6 +44,7 @@ message_config = {
     "tracking_follows": False,
     "font_size":        28,
     "bubble_padding":   12,
+    "sound_file":       "",
 }
 
 
@@ -77,6 +78,7 @@ class MessageConfig(BaseModel):
     tracking_follows: bool = False
     font_size:        int  = 28
     bubble_padding:   int  = 12
+    sound_file:       str  = ""
 
 
 # ── Broadcast helper ──────────────────────────────────────────────────────────
@@ -197,6 +199,7 @@ async def receive_subscribe(alert: SubscribeAlert):
         "follow":       message_config.get("tracking_follows", False),
         "font_size":    message_config.get("font_size", 28),
         "padding":      message_config.get("bubble_padding", 12),
+        "play_sound":   bool(message_config.get("sound_file", "")),
     })
     print(f"[server] Alert queued: {msg}")
     return {"ok": True}
@@ -214,6 +217,20 @@ async def websocket_endpoint(ws: WebSocket):
     except WebSocketDisconnect:
         connected_clients.discard(ws)
         print(f"[server] OBS client disconnected. Total: {len(connected_clients)}")
+
+
+@app.get("/sound")
+async def serve_sound():
+    """Serves the uploaded sound file to the overlay."""
+    sound_path_str = message_config.get("sound_file", "")
+    if not sound_path_str:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="No sound file configured")
+    sound_path = Path(sound_path_str)
+    if not sound_path.exists():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Sound file not found")
+    return FileResponse(str(sound_path), media_type="audio/mpeg")
 
 
 @app.get("/")
