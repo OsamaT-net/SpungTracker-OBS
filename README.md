@@ -27,7 +27,7 @@ Start services inside the app in this order:
 
 ---
 
-## 3. NVIDIA CUDA (VIDIA GPUs only) RECCOMENDED
+## 3. NVIDIA CUDA (NVIDIA GPUs only) RECCOMENDED
 
 YOLO is extremely CPU intensive, this offloads the load to the gpu and runs it efficiently
 
