@@ -432,11 +432,11 @@ class MainWindow(QMainWindow):
             0 if self.cfg.get("tracker_mode", "oneshot") == "oneshot" else 1)
         tl.addRow("Tracker mode", self.mode_combo)
 
-        save_btn = QPushButton("💾 Save settings")
+        save_btn = QPushButton("Save settings")
         save_btn.clicked.connect(self._save_settings)
         tl.addRow("", save_btn)
 
-        tabs.addTab(tracker_tab, "🎯 Tracker")
+        tabs.addTab(tracker_tab, "Tracker")
 
         # ── Tab 2: Twitch ──
         twitch_tab = QWidget()
@@ -463,11 +463,11 @@ class MainWindow(QMainWindow):
         id_link.setOpenExternalLinks(True)
         tw.addRow("", id_link)
 
-        save_twitch_btn = QPushButton("💾 Save Twitch credentials")
+        save_twitch_btn = QPushButton("Save Twitch credentials")
         save_twitch_btn.clicked.connect(self._save_settings)
         tw.addRow("", save_twitch_btn)
 
-        tabs.addTab(twitch_tab, "📡 Twitch")
+        tabs.addTab(twitch_tab, "Twitch")
 
         # ── Tab 3: Message ──
         msg_tab = QWidget()
@@ -534,11 +534,11 @@ class MainWindow(QMainWindow):
         sound_row.addWidget(sound_clear_btn)
         ml.addRow("Sound file", sound_row)
 
-        save_msg_btn = QPushButton("💾 Save & apply message settings")
+        save_msg_btn = QPushButton("Save & apply message settings")
         save_msg_btn.clicked.connect(self._save_and_push_message_config)
         ml.addRow("", save_msg_btn)
 
-        tabs.addTab(msg_tab, "💬 Message")
+        tabs.addTab(msg_tab, "Message")
 
         # ── Tab 4: Test ──
         test_tab = QWidget()
@@ -549,13 +549,13 @@ class MainWindow(QMainWindow):
         tel.addWidget(QLabel("Subscriber name:"))
         self.test_name = QLineEdit("TestViewer")
         tel.addWidget(self.test_name)
-        fire_btn = QPushButton("🎉 Fire test alert")
+        fire_btn = QPushButton("Fire test alert")
         fire_btn.setStyleSheet("font-size: 14px; padding: 10px; background: #1d4ed8;")
         fire_btn.clicked.connect(self._fire_test_alert)
         tel.addWidget(fire_btn)
         tel.addStretch()
 
-        tabs.addTab(test_tab, "🧪 Test")
+        tabs.addTab(test_tab, "Test")
 
         root.addWidget(tabs)
 
