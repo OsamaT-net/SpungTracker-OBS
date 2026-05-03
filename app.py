@@ -1,5 +1,5 @@
 """
-app.py — Frog Tracker Desktop Control Panel
+app.py — Spung Tracker Desktop Control Panel
 Run with: python app.py
 """
 
@@ -74,12 +74,12 @@ class StatusDot(QLabel):
 
 # ── On-demand tracker worker ──────────────────────────────────────────────────
 # Loads YOLO once, then sleeps. When trigger() is called it scans frames
-# until the frog is found (or timeout), pushes the bbox, then sleeps again.
+# until the Spung is found (or timeout), pushes the bbox, then sleeps again.
 # This eliminates the 15-second model load delay on every sub event.
 class OnDemandTrackerWorker(QObject):
     log     = pyqtSignal(str)
     stopped = pyqtSignal()
-    found   = pyqtSignal()   # emitted when frog position is confirmed
+    found   = pyqtSignal()   # emitted when Spung position is confirmed
 
     def __init__(self, cfg):
         super().__init__()
@@ -89,7 +89,7 @@ class OnDemandTrackerWorker(QObject):
         self._stop_evt = threading.Event()
 
     def trigger(self):
-        """Called when a sub fires — wakes the tracker to find the frog."""
+        """Called when a sub fires — wakes the tracker to find the Spung."""
         self._trigger.set()
 
     def run(self):
@@ -116,7 +116,7 @@ class OnDemandTrackerWorker(QObject):
                 if self._stop_evt.is_set():
                     break
                 self._trigger.clear()
-                self.log.emit("[tracker] Sub fired — scanning for frog...")
+                self.log.emit("[tracker] Sub fired — scanning for Spung...")
 
                 # Reset server bbox so polling doesn't match stale state
                 try:
@@ -128,13 +128,13 @@ class OnDemandTrackerWorker(QObject):
                 # Re-read tracking_follows each time so live changes take effect
                 follow_mode   = self.cfg.get("tracking_follows", False)
                 duration_s    = self.cfg.get("duration_ms", 6000) / 1000
-                # Phase 1: find the frog (up to timeout_s seconds)
+                # Phase 1: find the Spung (up to timeout_s seconds)
                 # Phase 2: if follow mode, keep tracking for the bubble duration
                 find_deadline = time.time() + timeout_s
                 found_pos     = False
                 last_infer    = 0
                 alert_sent    = False
-                follow_until  = None   # set once frog is found in follow mode
+                follow_until  = None   # set once Spung is found in follow mode
 
                 while not self._stop_evt.is_set():
                     now = time.time()
@@ -145,7 +145,7 @@ class OnDemandTrackerWorker(QObject):
                     if alert_sent and follow_mode and now > follow_until:
                         break  # follow duration expired
                     if not alert_sent and now > find_deadline:
-                        break  # gave up finding frog
+                        break  # gave up finding Spung
 
                     ret, frame = cap.read()
                     if not ret:
@@ -183,14 +183,14 @@ class OnDemandTrackerWorker(QObject):
                             pass
 
                         if not alert_sent:
-                            self.log.emit(f"[tracker] Frog found at ({cx:.2f}, {cy:.2f})"
+                            self.log.emit(f"[tracker] Spung found at ({cx:.2f}, {cy:.2f})"
                                           + (" — following" if follow_mode else ""))
                             self.found.emit()
                             alert_sent   = True
                             found_pos    = True
                             follow_until = time.time() + duration_s
                     else:
-                        # Frog not visible this frame — mark invisible but keep scanning in follow mode
+                        # Spung not visible this frame — mark invisible but keep scanning in follow mode
                         try:
                             requests.post(f"{SERVER_URL}/bbox",
                                 json={"cx": 0.5, "cy": 0.3, "visible": False}, timeout=0.1)
@@ -198,7 +198,7 @@ class OnDemandTrackerWorker(QObject):
                             pass
 
                 if not found_pos:
-                    self.log.emit("[tracker] Frog not found — using last known position")
+                    self.log.emit("[tracker] Spung not found — using last known position")
                     self.found.emit()  # still fire so the alert goes through
 
             cap.release()
@@ -355,7 +355,7 @@ class SubprocessWorker(QObject):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("🐸 Frog Tracker Control Panel")
+        self.setWindowTitle("🐸 SPUNG Tracker Control Panel")
         self.setMinimumSize(1100, 750)
 
         self.cfg = load_config()
@@ -515,10 +515,10 @@ class MainWindow(QMainWindow):
         self.bubble_padding_spin.setValue(self.cfg.get("bubble_padding", 12))
         ml.addRow("Bubble padding", self.bubble_padding_spin)
 
-        self.tracking_follows_check = QCheckBox("Bubble follows frog while it's visible")
+        self.tracking_follows_check = QCheckBox("Bubble follows Spung while it's visible")
         self.tracking_follows_check.setChecked(self.cfg.get("tracking_follows", False))
         self.tracking_follows_check.stateChanged.connect(self._save_and_push_message_config)
-        ml.addRow("Follow frog", self.tracking_follows_check)
+        ml.addRow("Follow Spung", self.tracking_follows_check)
 
         # Sound file picker
         sound_row = QHBoxLayout()
@@ -760,10 +760,10 @@ class MainWindow(QMainWindow):
         if detection:
             x1, y1, x2, y2 = [int(v) for v in detection[2]]
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 220, 80), 2)
-            cv2.putText(frame, "frog", (x1, y1 - 8),
+            cv2.putText(frame, "Spung", (x1, y1 - 8),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 220, 80), 2)
         else:
-            cv2.putText(frame, "No frog detected", (20, 40),
+            cv2.putText(frame, "No Spung detected", (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 60, 200), 2)
         rgb  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         h, w = rgb.shape[:2]
@@ -860,7 +860,7 @@ class MainWindow(QMainWindow):
         if mode == "oneshot" and self._tracker_active and \
                 isinstance(self._tracker_worker, OnDemandTrackerWorker):
             # Trigger the always-loaded model to scan, then fire the alert once found
-            self._log("[tracker] Waking tracker to locate frog...")
+            self._log("[tracker] Waking tracker to locate Spung...")
 
             def wait_for_found():
                 # Connect found signal once
