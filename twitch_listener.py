@@ -42,13 +42,13 @@ def load_config():
     return cfg["client_id"], cfg["client_secret"], cfg["broadcaster_id"], overlay_url
 
 
-def post_alert(overlay_url, username, tier="1000", is_gift=False):
+async def post_alert(overlay_url, username, tier="1000", is_gift=False):
     try:
-        r = requests.post(overlay_url, json={
-            "username": username,
-            "tier":     tier,
-            "is_gift":  is_gift,
-        }, timeout=2)
+        r = await asyncio.to_thread(
+            requests.post, overlay_url,
+            json={"username": username, "tier": tier, "is_gift": is_gift},
+            timeout=2,
+        )
         print(f"[twitch] Alert sent: {username} (tier={tier}, gift={is_gift}) → {r.status_code}")
     except Exception as e:
         print(f"[twitch] Failed to send alert: {e}")
@@ -67,21 +67,25 @@ async def main():
     # Get the authenticated user to confirm identity
     user = await first(twitch.get_users())
     print(f"[twitch] Authenticated as: {user.login} (id={user.id})")
+    if user.id != broadcaster_id:
+        raise ValueError(
+            f"Authenticated user id ({user.id}) does not match broadcaster_id ({broadcaster_id}) in config.json"
+        )
 
     async def on_subscribe(event: ChannelSubscribeEvent):
         print(f"[twitch] New sub: {event.event.user_name} (gift={event.event.is_gift})")
         if event.event.is_gift:
             return  # handled by on_gift_sub to avoid duplicate alerts
-        post_alert(overlay_url, event.event.user_name, event.event.tier, False)
+        await post_alert(overlay_url, event.event.user_name, event.event.tier, False)
 
     async def on_gift_sub(event: ChannelSubscriptionGiftEvent):
         gifter = event.event.user_name or "Anonymous"
         print(f"[twitch] Gift sub: {gifter} x{event.event.total}")
-        post_alert(overlay_url, f"{gifter} (x{event.event.total})", event.event.tier, True)
+        await post_alert(overlay_url, f"{gifter} (x{event.event.total})", event.event.tier, True)
 
     async def on_resub(event: ChannelSubscriptionMessageEvent):
         print(f"[twitch] Resub: {event.event.user_name}")
-        post_alert(overlay_url, event.event.user_name, event.event.tier, False)
+        await post_alert(overlay_url, event.event.user_name, event.event.tier, False)
 
     eventsub = EventSubWebsocket(twitch)
     eventsub.start()
@@ -93,7 +97,7 @@ async def main():
     print("[twitch] Ready — listening for subscriber events. Press Ctrl+C to stop.")
     try:
         await asyncio.Event().wait()
-    except (KeyboardInterrupt, asyncio.CancelledError):
+    except asyncio.CancelledError:
         pass
     finally:
         await eventsub.stop()
