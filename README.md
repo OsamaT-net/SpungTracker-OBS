@@ -5,7 +5,7 @@
 
 Using git:
 ```powershell
-git clone https://github.com/OsamaT-net/SpungTracker-Twitch.git
+git clone https://github.com/OsamaT-net/SpungTracker-OBS.git
 ```
 Direct Download:
 1. Click <>Code
