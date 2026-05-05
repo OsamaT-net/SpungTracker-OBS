@@ -43,6 +43,8 @@ def load_config():
         "resub_template": "{emoji} {username} resubbed! {tier}",
         "sub_emoji":      "🎉",
         "gift_emoji":     "🎁",
+        "member_template": "{emoji} {username} became a member!",
+        "member_emoji":    "🌟",
         "show_tier":      True,
         "duration_ms":    6000,
         "tracking_follows": False,
@@ -513,6 +515,14 @@ class MainWindow(QMainWindow):
         self.gift_emoji_edit = QLineEdit(self.cfg.get("gift_emoji", "🎁"))
         ml.addRow("Gift emoji", self.gift_emoji_edit)
 
+        ml.addRow(QLabel("── YouTube ──────────────────"))
+
+        self.member_template_edit = QLineEdit(self.cfg.get("member_template", "{emoji} {username} became a member!"))
+        ml.addRow("Member message", self.member_template_edit)
+
+        self.member_emoji_edit = QLineEdit(self.cfg.get("member_emoji", "🌟"))
+        ml.addRow("Member emoji", self.member_emoji_edit)
+
         self.show_tier_check = QCheckBox("Show tier label (Tier 1 / Tier 2 / Tier 3)")
         self.show_tier_check.setChecked(self.cfg.get("show_tier", True))
         ml.addRow("", self.show_tier_check)
@@ -683,6 +693,8 @@ class MainWindow(QMainWindow):
             "resub_template": self.resub_template_edit.text().strip(),
             "sub_emoji":      self.sub_emoji_edit.text().strip(),
             "gift_emoji":     self.gift_emoji_edit.text().strip(),
+            "member_template": self.member_template_edit.text().strip(),
+            "member_emoji":    self.member_emoji_edit.text().strip(),
             "show_tier":      self.show_tier_check.isChecked(),
             "duration_ms":    self.duration_spin.value(),
             "tracking_follows": self.tracking_follows_check.isChecked(),
@@ -864,6 +876,8 @@ class MainWindow(QMainWindow):
                 "resub_template":  self.cfg["resub_template"],
                 "sub_emoji":       self.cfg["sub_emoji"],
                 "gift_emoji":      self.cfg["gift_emoji"],
+                "member_template": self.cfg.get("member_template", "{emoji} {username} became a member!"),
+                "member_emoji":    self.cfg.get("member_emoji", "🌟"),
                 "show_tier":       self.cfg["show_tier"],
                 "duration_ms":     self.cfg["duration_ms"],
                 "tracking_follows": self.cfg.get("tracking_follows", False),

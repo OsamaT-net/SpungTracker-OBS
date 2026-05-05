@@ -39,6 +39,8 @@ message_config = {
     "resub_template":"{emoji} {username} resubbed! {tier}",
     "sub_emoji":     "🎉",
     "gift_emoji":    "🎁",
+    "member_template": "{emoji} {username} became a member!",
+    "member_emoji":    "🌟",
     "show_tier":     True,
     "duration_ms":      6000,
     "tracking_follows": False,
@@ -66,6 +68,7 @@ class SubscribeAlert(BaseModel):
     username: str
     tier: str = "1000"
     is_gift: bool = False
+    source: str = "twitch"
 
 class MessageConfig(BaseModel):
     sub_template:  str  = "{emoji} {username} subscribed! {tier}"
@@ -73,6 +76,8 @@ class MessageConfig(BaseModel):
     resub_template:str  = "{emoji} {username} resubbed! {tier}"
     sub_emoji:     str  = "🎉"
     gift_emoji:    str  = "🎁"
+    member_template: str = "{emoji} {username} became a member!"
+    member_emoji:    str = "🌟"
     show_tier:        bool = True
     duration_ms:      int  = 6000
     tracking_follows: bool = False
@@ -164,7 +169,14 @@ async def receive_subscribe(alert: SubscribeAlert):
     if not message_config["show_tier"]:
         tier_label = ""
 
-    if alert.is_gift:
+    if alert.source == "youtube":
+        msg = build_message(
+            message_config["member_template"],
+            message_config["member_emoji"],
+            alert.username,
+            "",
+        )
+    elif alert.is_gift:
         msg = build_message(
             message_config["gift_template"],
             message_config["gift_emoji"],

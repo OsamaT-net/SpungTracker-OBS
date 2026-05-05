@@ -68,7 +68,7 @@ async def post_alert(overlay_url, username, is_gift=False):
     try:
         r = await asyncio.to_thread(
             requests.post, overlay_url,
-            json={"username": username, "tier": "1000", "is_gift": is_gift},
+            json={"username": username, "tier": "1000", "is_gift": is_gift, "source": "youtube"},
             timeout=2,
         )
         print(f"[youtube] Alert sent: {username} (gift={is_gift}) → {r.status_code}")
