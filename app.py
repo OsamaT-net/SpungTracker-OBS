@@ -49,6 +49,7 @@ def load_config():
         "font_size":        28,
         "bubble_padding":   12,
         "sound_file":       "",
+        "youtube_channel_url": "",
     }
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, encoding="utf-8") as f:
@@ -366,6 +367,8 @@ class MainWindow(QMainWindow):
         self._tracker_thread = None
         self._twitch_worker  = None
         self._twitch_thread  = None
+        self._yt_worker      = None
+        self._yt_thread      = None
 
         self._tracker_active = False
 
@@ -469,7 +472,25 @@ class MainWindow(QMainWindow):
 
         tabs.addTab(twitch_tab, "Twitch")
 
-        # ── Tab 3: Message ──
+        # ── Tab 3: YouTube ──
+        yt_tab = QWidget()
+        yl = QFormLayout(yt_tab)
+        yl.setSpacing(10)
+        yl.setContentsMargins(12, 12, 12, 12)
+
+        yl.addRow(QLabel("Paste your YouTube channel URL.\nThe live stream is detected automatically."))
+
+        self.yt_channel_url_edit = QLineEdit(self.cfg.get("youtube_channel_url", ""))
+        self.yt_channel_url_edit.setPlaceholderText("e.g. https://www.youtube.com/@YourChannel")
+        yl.addRow("Channel URL", self.yt_channel_url_edit)
+
+        save_yt_btn = QPushButton("Save YouTube settings")
+        save_yt_btn.clicked.connect(self._save_settings)
+        yl.addRow("", save_yt_btn)
+
+        tabs.addTab(yt_tab, "YouTube")
+
+        # ── Tab 4: Message ──
         msg_tab = QWidget()
         ml = QFormLayout(msg_tab)
         ml.setSpacing(10)
@@ -540,7 +561,7 @@ class MainWindow(QMainWindow):
 
         tabs.addTab(msg_tab, "Message")
 
-        # ── Tab 4: Test ──
+        # ── Tab 5: Test ──
         test_tab = QWidget()
         tel = QVBoxLayout(test_tab)
         tel.setContentsMargins(12, 12, 12, 12)
@@ -593,6 +614,10 @@ class MainWindow(QMainWindow):
 
         row, self.twitch_dot, self.twitch_start, self.twitch_stop = \
             make_svc_row("Twitch listener", self._start_twitch, self._stop_twitch)
+        svc_layout.addLayout(row)
+
+        row, self.yt_dot, self.yt_start, self.yt_stop = \
+            make_svc_row("YouTube listener", self._start_youtube, self._stop_youtube)
         svc_layout.addLayout(row)
 
         right.addWidget(svc_group)
@@ -664,6 +689,7 @@ class MainWindow(QMainWindow):
             "font_size":        self.font_size_spin.value(),
             "bubble_padding":   self.bubble_padding_spin.value(),
             "sound_file":       self.sound_path_edit.text().strip(),
+            "youtube_channel_url": self.yt_channel_url_edit.text().strip(),
         })
         save_config(self.cfg)
         self._log("[app] Settings saved")
@@ -802,6 +828,32 @@ class MainWindow(QMainWindow):
         dot.set_off()
         self._log("[twitch] Stopped")
 
+    # ── YouTube ───────────────────────────────────────────────────────────────
+    def _start_youtube(self, start_btn, stop_btn, dot):
+        self._save_settings()
+        if not self.cfg.get("youtube_channel_url"):
+            self._log("[youtube] ERROR: Fill in the YouTube Video ID in the YouTube tab first!")
+            return
+        self._yt_worker = SubprocessWorker("youtube_listener.py")
+        self._yt_thread = QThread()
+        self._yt_worker.moveToThread(self._yt_thread)
+        self._yt_thread.started.connect(self._yt_worker.run)
+        self._yt_worker.log.connect(self._log)
+        self._yt_worker.stopped.connect(lambda: dot.set_off())
+        self._yt_thread.start()
+        start_btn.setEnabled(False)
+        stop_btn.setEnabled(True)
+        dot.set_on()
+        self._log("[youtube] Starting...")
+
+    def _stop_youtube(self, start_btn, stop_btn, dot):
+        if self._yt_worker: self._yt_worker.stop()
+        if self._yt_thread: self._yt_thread.quit(); self._yt_thread.wait()
+        start_btn.setEnabled(True)
+        stop_btn.setEnabled(False)
+        dot.set_off()
+        self._log("[youtube] Stopped")
+
     # ── Message config ────────────────────────────────────────────────────────
     def _save_and_push_message_config(self, *_):
         self._save_settings()
@@ -887,6 +939,7 @@ class MainWindow(QMainWindow):
         self._save_settings()
         if self._tracker_worker: self._tracker_worker.stop()
         if self._twitch_worker:  self._twitch_worker.stop()
+        if self._yt_worker:      self._yt_worker.stop()
         if self._server_worker:  self._server_worker.stop()
         event.accept()
 

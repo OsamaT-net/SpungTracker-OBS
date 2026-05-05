@@ -29,7 +29,7 @@ import uvicorn
 # ── State ─────────────────────────────────────────────────────────────────────
 connected_clients: Set[WebSocket] = set()
 latest_bbox     = {"cx": 0.5, "cy": 0.3, "visible": False}
-last_known_bbox = {"cx": 0.5, "cy": 0.3}  # last position frog was actually seen
+last_known_bbox = {"cx": 0.5, "cy": 0.3}  # last position Spung was actually seen
 alert_queue: list = []
 
 # ── Message templates (overridable via POST /message-config) ──────────────────
@@ -135,7 +135,7 @@ async def receive_bbox(update: BBoxUpdate):
 
 @app.get("/bbox-status")
 async def bbox_status():
-    """Returns whether the frog is currently visible — polled by app.py in oneshot mode."""
+    """Returns whether the Spung is currently visible — polled by app.py in oneshot mode."""
     return {"visible": latest_bbox.get("visible", False),
             "cx": latest_bbox.get("cx", 0.5),
             "cy": latest_bbox.get("cy", 0.3)}
@@ -180,13 +180,13 @@ async def receive_subscribe(alert: SubscribeAlert):
         )
 
     # Use current position if visible, otherwise fall back to last known position.
-    # Only defaults to center if frog has never been seen this session.
+    # Only defaults to center if Spung has never been seen this session.
     if latest_bbox.get("visible"):
         snapped_bbox = latest_bbox.copy()
     else:
         snapped_bbox = {**last_known_bbox, "visible": False}
         print(
-            f"[server] Frog not visible — using last known position "
+            f"[server] Spung not visible — using last known position "
             f"({last_known_bbox['cx']:.2f}, {last_known_bbox['cy']:.2f})"
         )
 

@@ -35,11 +35,12 @@ Start services inside the app in this order:
 
 1. **Hub server**
 2. **YOLO tracker**
-3. **Twitch listener**
+3. **Twitch listener**  
+4. **YouTube listener**
 
 ---
 
-## 3. NVIDIA CUDA (VIDIA GPUs only) RECCOMENDED
+## 4. NVIDIA CUDA (NVIDIA GPUs only) RECCOMENDED
 
 YOLO is extremely CPU intensive, this offloads the load to the gpu and runs it efficiently
 
@@ -75,7 +76,22 @@ Open the app → go to the **Twitch** tab → paste all three values → click *
 
 ---
 
-## 6. OBS Browser Source
+## 6. YouTube
+
+The YouTube listener triggers the bubble whenever someone **purchases a new membership** on your live stream. No API key or OAuth setup required.
+
+### Setup
+1. Open the app → go to the **YouTube** tab
+2. Paste your channel URL (e.g. `https://www.youtube.com/@YourChannel`) → click **Save YouTube settings**
+3. Start the **YouTube listener** service from the Services panel
+
+The listener will automatically detect your active live stream when it starts. If no live stream is found, an error will appear in the log.
+
+> **Note:** The YouTube listener can run alongside the Twitch listener simultaneously — both can be active at the same time.
+
+---
+
+## 7. OBS Browser Source
 
 1. In OBS, add a new **Browser Source** to your scene
 2. Set the Width and Height to the same values as camera. 

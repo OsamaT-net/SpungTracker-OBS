@@ -1,11 +1,11 @@
 """
-tracker.py — Frog tracker using YOLO-World (zero-shot detection).
+tracker.py — Spung tracker using YOLO-World (zero-shot detection).
 
 Two modes:
-  --mode oneshot      Find frog once, push position, exit. Used by on-demand mode.
+  --mode oneshot      Find Spung once, push position, exit. Used by on-demand mode.
   --mode continuous   Run forever, push bbox every frame. Used for live preview.
 
-In oneshot mode: if frog is not found within --timeout seconds, exits silently.
+In oneshot mode: if Spung is not found within --timeout seconds, exits silently.
 The server will fall back to last known position automatically.
 """
 
@@ -102,7 +102,7 @@ while True:
         if detection:
             cx, cy, _ = detection
             push_bbox(cx, cy, True)
-            print(f"[tracker] Frog found at ({cx:.2f}, {cy:.2f})")
+            print(f"[tracker] Spung found at ({cx:.2f}, {cy:.2f})")
             if args.mode == "oneshot":
                 print("[tracker] Oneshot complete — exiting.")
                 break
@@ -110,7 +110,7 @@ while True:
             push_bbox(0.5, 0.3, False)
             if args.mode == "oneshot" and (now - start_time) > args.timeout:
                 # Don't push anything — server will use last_known_bbox as fallback
-                print(f"[tracker] Oneshot: frog not found within {args.timeout}s — server will use last known position.")
+                print(f"[tracker] Oneshot: Spung not found within {args.timeout}s — server will use last known position.")
                 break
 
     # Continuous mode only: show live preview window
@@ -122,9 +122,9 @@ while True:
             cv2.putText(preview, args.target, (x1, y1 - 8),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 220, 80), 2)
         else:
-            cv2.putText(preview, "No frog detected", (20, 40),
+            cv2.putText(preview, "No Spung detected", (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 220), 2)
-        cv2.imshow("Frog Tracker — press Q to quit", preview)
+        cv2.imshow("Spung Tracker — press Q to quit", preview)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
