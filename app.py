@@ -330,10 +330,13 @@ class SubprocessWorker(QObject):
     def run(self):
         self._running = True
         try:
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
             self._proc = subprocess.Popen(
                 [sys.executable, self.script] + self.args,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, bufsize=1, encoding="utf-8", errors="replace",
+                env=env,
             )
             for line in self._proc.stdout:
                 if not self._running:

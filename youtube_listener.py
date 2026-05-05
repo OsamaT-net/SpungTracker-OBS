@@ -7,12 +7,17 @@ The live stream video ID is resolved automatically at startup.
 Uses pytchat for polling (no OAuth required for public streams).
 """
 
-import asyncio
+import concurrent.futures
 import json
 import os
 import re
+import sys
+import threading
 import requests
 import pytchat
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 CONFIG_FILE = "config.json"
 
@@ -39,8 +44,11 @@ def resolve_live_video_id(channel_url: str) -> str:
     if vid:
         return vid.group(1)
 
-    # Case 2: Rendered live page — find video ID in page source
-    vid = re.search(r'"videoId":"([a-zA-Z0-9_-]{11})"', resp.text)
+    # Case 2: Canonical link tag — points to the actual video on the /live page
+    vid = re.search(
+        r'<link rel="canonical" href="https://www\.youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})"',
+        resp.text,
+    )
     if vid:
         return vid.group(1)
 
@@ -64,45 +72,66 @@ def load_config():
     return channel_url, overlay_url
 
 
-async def post_alert(overlay_url, username, is_gift=False):
+def post_alert(overlay_url, username, is_gift=False):
     try:
-        r = await asyncio.to_thread(
-            requests.post, overlay_url,
+        r = requests.post(
+            overlay_url,
             json={"username": username, "tier": "1000", "is_gift": is_gift, "source": "youtube"},
             timeout=2,
         )
-        print(f"[youtube] Alert sent: {username} (gift={is_gift}) → {r.status_code}")
+        print(f"[youtube] Alert sent: {username} (gift={is_gift}) -> {r.status_code}")
     except Exception as e:
         print(f"[youtube] Failed to send alert: {e}")
 
 
-async def main():
+def run_chat_loop(video_id, overlay_url, stop_event):
+    print("[youtube] Connecting to live chat...")
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(pytchat.create, video_id, interruptable=False)
+            chat = future.result(timeout=15)
+    except concurrent.futures.TimeoutError:
+        print("[youtube] ERROR: Timed out connecting to live chat (15s).")
+        print("[youtube] YouTube may be slow or blocking the request.")
+        return
+    except Exception as e:
+        print(f"[youtube] ERROR creating live chat: {e}")
+        return
+
+    if not chat.is_alive():
+        print(f"[youtube] ERROR: Could not connect to live chat for video {video_id}.")
+        print("[youtube] The stream may not be live or live chat may be disabled.")
+        return
+
+    print("[youtube] Ready — listening for member events. Press Ctrl+C to stop.")
+    while chat.is_alive() and not stop_event.is_set():
+        try:
+            for c in chat.get().sync_items():
+                if c.type == "newSponsor":
+                    print(f"[youtube] New member: {c.author.name}")
+                    post_alert(overlay_url, c.author.name)
+                elif c.type == "memberMilestone":
+                    print(f"[youtube] Member milestone: {c.author.name}")
+                    post_alert(overlay_url, c.author.name)
+        except Exception as e:
+            print(f"[youtube] Chat error: {e}")
+        stop_event.wait(3)
+
+    print("[youtube] Stopped.")
+
+
+def main():
     channel_url, overlay_url = load_config()
     print(f"[youtube] Resolving live stream for: {channel_url}")
     video_id = resolve_live_video_id(channel_url)
     print(f"[youtube] Live stream found — video ID: {video_id}")
 
-    async def handle_chat(chatdata):
-        async for c in chatdata.async_items():
-            if c.type == "newSponsor":
-                print(f"[youtube] New member: {c.author.name}")
-                await post_alert(overlay_url, c.author.name, is_gift=False)
-            elif c.type == "memberMilestone":
-                print(f"[youtube] Member milestone: {c.author.name}")
-                await post_alert(overlay_url, c.author.name, is_gift=False)
-
-    livechat = pytchat.LiveChatAsync(video_id, callback=handle_chat)
-
-    print("[youtube] Ready — listening for member events. Press Ctrl+C to stop.")
+    stop_event = threading.Event()
     try:
-        while livechat.is_alive():
-            await asyncio.sleep(3)
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        pass
-    finally:
-        livechat.terminate()
-        print("[youtube] Stopped.")
+        run_chat_loop(video_id, overlay_url, stop_event)
+    except (KeyboardInterrupt, SystemExit):
+        stop_event.set()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
